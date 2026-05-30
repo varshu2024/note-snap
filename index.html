@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NoteSnap – AI Study Summarizer | Google Gemini</title>
+  <meta name="description" content="NoteSnap uses Google Gemini AI to instantly summarize textbooks and lecture notes for students. Free, fast, and built for Indian students."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <style>
+    :root {
+      --bg-primary: #0a0e1a;
+      --bg-secondary: #111827;
+      --bg-card: rgba(255,255,255,0.04);
+      --bg-card-hover: rgba(255,255,255,0.07);
+      --border: rgba(255,255,255,0.08);
+      --border-active: rgba(99,179,237,0.5);
+      --text-primary: #f0f4ff;
+      --text-secondary: #94a3b8;
+      --text-muted: #475569;
+      --accent-blue: #4f9cf9;
+      --accent-purple: #a78bfa;
+      --accent-cyan: #67e8f9;
+      --accent-green: #4ade80;
+      --gradient-main: linear-gradient(135deg, #4f9cf9 0%, #a78bfa 100%);
+      --gradient-hero: linear-gradient(135deg, #1e3a5f 0%, #2d1b69 50%, #1a1a3e 100%);
+      --shadow-card: 0 8px 40px rgba(0,0,0,0.4);
+      --shadow-glow: 0 0 40px rgba(79,156,249,0.15);
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── BACKGROUND ANIMATION ── */
+    .bg-orbs {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.18;
+      animation: float 20s ease-in-out infinite;
+    }
+    .orb-1 { width: 600px; height: 600px; background: #4f9cf9; top: -200px; left: -200px; animation-delay: 0s; }
+    .orb-2 { width: 500px; height: 500px; background: #a78bfa; bottom: -200px; right: -100px; animation-delay: -7s; }
+    .orb-3 { width: 400px; height: 400px; background: #67e8f9; top: 40%; left: 60%; animation-delay: -14s; }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0,0) scale(1); }
+      33% { transform: translate(30px,-20px) scale(1.05); }
+      66% { transform: translate(-20px,30px) scale(0.95); }
+    }
+
+    /* ── LAYOUT ── */
+    .page-wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 20px 60px;
+    }
+
+    /* ── HERO HEADER ── */
+    .hero {
+      text-align: center;
+      padding: 60px 20px 40px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(79,156,249,0.12);
+      border: 1px solid rgba(79,156,249,0.3);
+      color: var(--accent-blue);
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 6px 16px;
+      border-radius: 100px;
+      margin-bottom: 28px;
+      letter-spacing: 0.5px;
+    }
+    .hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-blue); animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} }
+
+    .hero h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(2.5rem, 6vw, 3.8rem);
+      font-weight: 700;
+      line-height: 1.1;
+      background: var(--gradient-main);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 16px;
+    }
+
+    .hero p {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      max-width: 520px;
+      margin: 0 auto 32px;
+      line-height: 1.7;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+    .stat { text-align: center; }
+    .stat-num { font-size: 1.5rem; font-weight: 700; background: var(--gradient-main); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .stat-label { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px 32px;
+      margin-bottom: 16px;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .card:hover { border-color: var(--border-active); box-shadow: var(--shadow-glow); }
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 18px;
+    }
+    .card-title .step-num {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      background: var(--gradient-main);
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    /* ── INPUTS ── */
+    .input-wrap { position: relative; }
+    .input-wrap .lock-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1rem;
+      color: var(--text-muted);
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 13px 14px 13px 40px;
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.93rem;
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+      transition: all 0.3s;
+    }
+    input[type="text"]::placeholder { color: var(--text-muted); }
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+      background: rgba(79,156,249,0.06);
+      box-shadow: 0 0 0 4px rgba(79,156,249,0.1);
+    }
+
+    .hint {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+    .hint a { color: var(--accent-blue); text-decoration: none; }
+    .hint a:hover { text-decoration: underline; }
+
+    /* ── UPLOAD AREA ── */
+    .upload-area {
+      border: 2px dashed rgba(79,156,249,0.35);
+      border-radius: var(--radius-md);
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: rgba(79,156,249,0.03);
+      position: relative;
+      overflow: hidden;
+    }
+    .upload-area:hover {
+      border-color: var(--accent-blue);
+      background: rgba(79,156,249,0.08);
+      transform: translateY(-2px);
+    }
+    .upload-area.dragging {
+      border-color: var(--accent-cyan);
+      background: rgba(103,232,249,0.08);
+    }
+    .upload-area input { display: none; }
+    .upload-icon { font-size: 2.8rem; margin-bottom: 12px; display: block; }
+    .upload-title { font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+    .upload-sub { font-size: 0.8rem; color: var(--text-muted); }
+
+    .file-status {
+      margin-top: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--accent-green);
+      display: none;
+    }
+    .file-status.visible { display: flex; }
+
+    /* ── SELECT ── */
+    select {
+      width: 100%;
+      padding: 13px 16px;
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.93rem;
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      transition: all 0.3s;
+    }
+    select:focus { outline: none; border-color: var(--accent-blue); box-shadow: 0 0 0 4px rgba(79,156,249,0.1); }
+    select option { background: #1e293b; color: var(--text-primary); }
+
+    /* ── SUBJECT CHIPS ── */
+    .chip-label { font-size: 0.78rem; color: var(--text-muted); margin: 16px 0 10px; font-weight: 500; }
+    .chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: 'Inter', sans-serif;
+      transition: all 0.2s;
+    }
+    .chip:hover { border-color: var(--accent-blue); color: var(--accent-blue); background: rgba(79,156,249,0.08); }
+    .chip.active { border-color: var(--accent-blue); color: #fff; background: rgba(79,156,249,0.2); }
+
+    /* ── GENERATE BUTTON ── */
+    .btn-generate {
+      width: 100%;
+      padding: 18px;
+      background: var(--gradient-main);
+      color: white;
+      font-size: 1.05rem;
+      font-weight: 700;
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      letter-spacing: 0.3px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s;
+      box-shadow: 0 4px 24px rgba(79,156,249,0.35);
+    }
+    .btn-generate::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .btn-generate:hover::before { opacity: 1; }
+    .btn-generate:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(79,156,249,0.45); }
+    .btn-generate:active { transform: translateY(0); }
+    .btn-generate:disabled {
+      background: rgba(255,255,255,0.08);
+      color: var(--text-muted);
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    /* ── STATUS ── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 36px;
+      margin: 12px 0;
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+
+    /* ── PROGRESS BAR ── */
+    .progress-wrap {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border-radius: 100px;
+      height: 3px;
+      margin: 8px 0;
+      overflow: hidden;
+      display: none;
+    }
+    .progress-wrap.visible { display: block; }
+    .progress-bar {
+      height: 100%;
+      background: var(--gradient-main);
+      border-radius: 100px;
+      width: 0%;
+      transition: width 0.3s ease;
+      animation: progress-pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes progress-pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+    /* ── RESULT CARD ── */
+    .result-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(79,156,249,0.25);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      margin-top: 16px;
+      display: none;
+      animation: slideUp 0.4s cubic-bezier(0.16,1,0.3,1);
+      box-shadow: 0 8px 40px rgba(79,156,249,0.12);
+    }
+    .result-card.visible { display: block; }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .result-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 700;
+      background: var(--gradient-main);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .result-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(74,222,128,0.1);
+      border: 1px solid rgba(74,222,128,0.3);
+      color: var(--accent-green);
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 100px;
+    }
+
+    .result-content {
+      background: rgba(0,0,0,0.25);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      font-size: 0.94rem;
+      line-height: 1.85;
+      color: var(--text-primary);
+      white-space: pre-wrap;
+      font-family: 'Inter', sans-serif;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    .result-content::-webkit-scrollbar { width: 4px; }
+    .result-content::-webkit-scrollbar-track { background: transparent; }
+    .result-content::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 2px; }
+
+    .action-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 18px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.05);
+      color: var(--text-secondary);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.83rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .action-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); border-color: rgba(255,255,255,0.2); }
+    .action-btn.danger { border-color: rgba(248,113,113,0.3); color: #f87171; }
+    .action-btn.danger:hover { background: rgba(248,113,113,0.08); }
+
+    /* ── FEATURES STRIP ── */
+    .features-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .feature-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 18px 16px;
+      text-align: center;
+      transition: all 0.3s;
+    }
+    .feature-item:hover { border-color: var(--border-active); background: var(--bg-card-hover); transform: translateY(-2px); }
+    .feature-icon { font-size: 1.6rem; margin-bottom: 8px; }
+    .feature-title { font-size: 0.82rem; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
+    .feature-sub { font-size: 0.73rem; color: var(--text-muted); }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      padding: 40px 20px 20px;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      line-height: 2;
+    }
+    footer strong { color: var(--text-secondary); }
+    footer a { color: var(--accent-blue); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      .hero h1 { font-size: 2.2rem; }
+      .card { padding: 20px; }
+      .result-card { padding: 20px; }
+      .stat-row { gap: 20px; }
+    }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(30,41,59,0.95);
+      border: 1px solid rgba(79,156,249,0.3);
+      color: var(--text-primary);
+      padding: 12px 24px;
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      opacity: 0;
+      transition: all 0.3s;
+      pointer-events: none;
+      z-index: 100;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── SECURITY WARNING ── */
+    .security-warn {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: rgba(251,191,36,0.07);
+      border: 1px solid rgba(251,191,36,0.25);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      margin-top: 12px;
+    }
+    .security-warn p { font-size: 0.8rem; color: #fbbf24; line-height: 1.5; }
+    .security-warn a { color: #fbbf24; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<!-- Background Orbs -->
+<div class="bg-orbs">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<div class="page-wrap">
+
+  <!-- ── HERO ── -->
+  <div class="hero">
+    <div class="hero-badge">
+      <span class="dot"></span>
+      Powered by Google Gemini 2.0 Flash
+    </div>
+    <h1>📚 NoteSnap</h1>
+    <p>Upload any PDF — textbook, lecture notes, or handouts — and get an instant AI-powered summary in seconds.</p>
+    <div class="stat-row">
+      <div class="stat">
+        <div class="stat-num">5</div>
+        <div class="stat-label">Summary Modes</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">100%</div>
+        <div class="stat-label">Free to Use</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">&lt; 10s</div>
+        <div class="stat-label">Generation Time</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">∞</div>
+        <div class="stat-label">PDFs Supported</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FEATURES ── -->
+  <div class="features-strip">
+    <div class="feature-item">
+      <div class="feature-icon">📋</div>
+      <div class="feature-title">Full Summary</div>
+      <div class="feature-sub">Key concepts + definitions</div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon">❓</div>
+      <div class="feature-title">Exam Prep</div>
+      <div class="feature-sub">Questions + model answers</div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">Quick Revision</div>
+      <div class="feature-sub">10 bullet points</div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon">🗺️</div>
+      <div class="feature-title">Mind Map</div>
+      <div class="feature-sub">Topic tree view</div>
+    </div>
+  </div>
+
+  <!-- ── STEP 1: SERVER STATUS ── -->
+  <div class="card" id="serverStatusCard">
+    <div class="card-title">
+      <span class="step-num">1</span>
+      Server Status
+    </div>
+    <div id="serverStatus" style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;">
+      <span id="serverDot" style="width:10px;height:10px;border-radius:50%;background:#fbbf24;flex-shrink:0;"></span>
+      <span id="serverMsg" style="font-size:0.88rem;color:var(--text-secondary);">Checking server connection...</span>
+    </div>
+    <div class="hint" style="margin-top:10px;">🔒 Your API key is stored securely on the server — never exposed in the browser.</div>
+  </div>
+
+  <!-- ── STEP 2: UPLOAD ── -->
+  <div class="card">
+    <div class="card-title">
+      <span class="step-num">2</span>
+      Upload Your PDF
+    </div>
+    <div class="upload-area" id="uploadArea" onclick="document.getElementById('pdfInput').click()"
+      ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+      <span class="upload-icon">📂</span>
+      <div class="upload-title">Click to upload or drag &amp; drop</div>
+      <div class="upload-sub">NCERT chapters, university notes, handouts · Max 15 pages read</div>
+      <input type="file" id="pdfInput" accept=".pdf" onchange="handleFile(event)"/>
+    </div>
+    <div class="file-status" id="fileStatus">
+      <span>✅</span>
+      <span id="fileStatusText">File loaded successfully</span>
+    </div>
+  </div>
+
+  <!-- ── STEP 3: OPTIONS ── -->
+  <div class="card">
+    <div class="card-title">
+      <span class="step-num">3</span>
+      Choose Summary Style
+    </div>
+    <select id="summaryType">
+      <option value="full">📋 Full Summary — Key concepts + definitions + revision points</option>
+      <option value="exam">❓ Exam Prep — Questions + model answers + scoring tips</option>
+      <option value="short">⚡ Quick Revision — 10 power bullet points</option>
+      <option value="simple">🧒 Simplify — Explain like I'm 15 years old</option>
+      <option value="mindmap">🗺️ Mind Map — Hierarchical topic breakdown</option>
+    </select>
+    <div class="chip-label">Subject hint (helps Gemini give better results):</div>
+    <div class="chip-row" id="chipRow">
+      <button class="chip active" onclick="setSubject(this,'')">General</button>
+      <button class="chip" onclick="setSubject(this,'Physics')">⚛️ Physics</button>
+      <button class="chip" onclick="setSubject(this,'Chemistry')">🧪 Chemistry</button>
+      <button class="chip" onclick="setSubject(this,'Biology')">🌿 Biology</button>
+      <button class="chip" onclick="setSubject(this,'Mathematics')">📐 Maths</button>
+      <button class="chip" onclick="setSubject(this,'History')">🏛️ History</button>
+      <button class="chip" onclick="setSubject(this,'Computer Science')">💻 CS</button>
+      <button class="chip" onclick="setSubject(this,'Economics')">📊 Economics</button>
+      <button class="chip" onclick="setSubject(this,'English')">📝 English</button>
+    </div>
+  </div>
+
+  <!-- ── GENERATE ── -->
+  <button class="btn-generate" onclick="generateSummary()" id="genBtn">
+    ✨ Generate Summary with Gemini AI
+  </button>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <div class="status-bar" id="statusBar"></div>
+
+  <!-- ── RESULT ── -->
+  <div class="result-card" id="resultCard">
+    <div class="result-header">
+      <div class="result-title">📝 Your Summary</div>
+      <div class="result-badge" id="modelBadge">✅ Google Gemini AI</div>
+    </div>
+    <div class="result-content" id="resultContent"></div>
+    <div class="action-row">
+      <button class="action-btn" id="copyBtn" onclick="copyResult()">📋 Copy</button>
+      <button class="action-btn" onclick="downloadResult()">⬇️ Download .txt</button>
+      <button class="action-btn" onclick="generateAgain()">🔄 Try Another Style</button>
+      <button class="action-btn danger" onclick="clearResult()">🗑️ Clear</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <strong>📚 NoteSnap</strong> &nbsp;·&nbsp; Built for <strong>Gen AI Academy APAC 2026</strong>
+  &nbsp;·&nbsp; Powered by <a href="https://aistudio.google.com" target="_blank">Google Gemini</a>
+  <br/>
+  Built by <strong>Uppada Varshini</strong> &nbsp;·&nbsp; India 🇮🇳
+  <br/>
+  <a href="https://aistudio.google.com/apikey" target="_blank">Get free API key</a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com" target="_blank">GitHub</a>
+</footer>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+  /* ── PDF.js setup ── */
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  let extractedText = '';
+  let selectedSubject = '';
+
+  /* ── Subject chip selection ── */
+  function setSubject(btn, subject) {
+    document.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedSubject = subject;
+  }
+
+  /* ── Drag & drop ── */
+  function onDragOver(e) {
+    e.preventDefault();
+    document.getElementById('uploadArea').classList.add('dragging');
+  }
+  function onDragLeave(e) {
+    document.getElementById('uploadArea').classList.remove('dragging');
+  }
+  function onDrop(e) {
+    e.preventDefault();
+    document.getElementById('uploadArea').classList.remove('dragging');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === 'application/pdf') {
+      processPDF(file);
+    } else {
+      showToast('❌ Please drop a PDF file');
+    }
+  }
+
+  /* ── File input handler ── */
+  function handleFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    processPDF(file);
+  }
+
+  function processPDF(file) {
+    setStatus('⏳ Reading PDF, please wait...');
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      const typedArray = new Uint8Array(e.target.result);
+      try {
+        const pdf = await pdfjsLib.getDocument(typedArray).promise;
+        let text = '';
+        const maxPages = Math.min(pdf.numPages, 15);
+        for (let i = 1; i <= maxPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          text += content.items.map(item => item.str).join(' ') + '\n';
+        }
+        extractedText = text.trim();
+        if (extractedText.length < 50) {
+          setStatus('⚠️ PDF appears to be image-based (scanned). Please try a text-based PDF.');
+          showFileStatus(false, 'Could not extract text — use a text-based PDF');
+        } else {
+          const charCount = extractedText.length.toLocaleString();
+          setStatus(`✅ PDF ready — ${pdf.numPages} pages · ${charCount} characters`);
+          showFileStatus(true, `${file.name} · ${pdf.numPages} pages · ${charCount} chars`);
+          showToast('✅ PDF loaded successfully!');
+        }
+      } catch (err) {
+        setStatus('❌ Could not read PDF. Please try another file.');
+        showFileStatus(false, 'Read error — try another file');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function showFileStatus(success, msg) {
+    const el = document.getElementById('fileStatus');
+    const txt = document.getElementById('fileStatusText');
+    el.classList.add('visible');
+    el.children[0].textContent = success ? '✅' : '❌';
+    el.style.color = success ? 'var(--accent-green)' : '#f87171';
+    txt.textContent = msg;
+  }
+
+  /* ── Check server health on load ── */
+  async function checkServer() {
+    try {
+      const res = await fetch('/api/health');
+      const data = await res.json();
+      const dot = document.getElementById('serverDot');
+      const msg = document.getElementById('serverMsg');
+      if (data.apiKeySet) {
+        dot.style.background = '#4ade80';
+        msg.textContent = '✅ Server connected — API key loaded and ready';
+        msg.style.color = '#4ade80';
+      } else {
+        dot.style.background = '#f87171';
+        msg.textContent = '⚠️ Server running but API key not set in .env file';
+        msg.style.color = '#f87171';
+      }
+    } catch {
+      const dot = document.getElementById('serverDot');
+      const msg = document.getElementById('serverMsg');
+      dot.style.background = '#f87171';
+      msg.textContent = '❌ Server not running — start it with: node server.js';
+      msg.style.color = '#f87171';
+    }
+  }
+  checkServer();
+
+  /* ── Generate summary via backend ── */
+  async function generateSummary() {
+    const summaryType = document.getElementById('summaryType').value;
+    const btn = document.getElementById('genBtn');
+
+    if (!extractedText || extractedText.length < 50) {
+      setStatus('⚠️ Please upload a valid PDF first (Step 2).');
+      showToast('⚠️ Upload a PDF first');
+      return;
+    }
+
+    btn.disabled = true;
+    setStatus('🤖 Gemini AI is reading and analyzing your notes...');
+    document.getElementById('resultCard').classList.remove('visible');
+    showProgress(true);
+
+    let prog = 0;
+    const progInterval = setInterval(() => {
+      prog = Math.min(prog + (Math.random() * 8), 85);
+      document.getElementById('progressBar').style.width = prog + '%';
+    }, 400);
+
+    try {
+      const response = await fetch('/api/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: extractedText,
+          type: summaryType,
+          subject: selectedSubject
+        })
+      });
+
+      clearInterval(progInterval);
+      document.getElementById('progressBar').style.width = '100%';
+
+      const data = await response.json();
+
+      if (data.error) {
+        setStatus('❌ Error: ' + data.error);
+        showToast('❌ Error — see status message');
+        showProgress(false);
+        btn.disabled = false;
+        return;
+      }
+
+      document.getElementById('resultContent').textContent = data.summary;
+      document.getElementById('modelBadge').textContent = '✅ ' + data.model;
+      document.getElementById('resultCard').classList.add('visible');
+      setStatus('✅ Summary generated using ' + data.model + '!');
+      showToast('✅ Summary ready!');
+      setTimeout(() => {
+        document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+
+    } catch (err) {
+      clearInterval(progInterval);
+      setStatus('❌ Network error. Check your API key and internet connection.');
+      showToast('❌ Network error');
+    }
+
+    setTimeout(() => showProgress(false), 600);
+    btn.disabled = false;
+  }
+
+  /* ── Actions ── */
+  function copyResult() {
+    const text = document.getElementById('resultContent').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('📋 Summary copied to clipboard!');
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = '✅ Copied!';
+      setTimeout(() => btn.textContent = '📋 Copy', 2000);
+    });
+  }
+
+  function downloadResult() {
+    const text = document.getElementById('resultContent').textContent;
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'NoteSnap_Summary.txt';
+    a.click();
+    showToast('⬇️ Downloading summary...');
+  }
+
+  function generateAgain() {
+    document.getElementById('resultCard').classList.remove('visible');
+    document.getElementById('summaryType').focus();
+    window.scrollTo({ top: document.getElementById('summaryType').offsetTop - 100, behavior: 'smooth' });
+  }
+
+  function clearResult() {
+    document.getElementById('resultCard').classList.remove('visible');
+    document.getElementById('resultContent').textContent = '';
+    setStatus('');
+  }
+
+  /* ── Helpers ── */
+  function setStatus(msg) {
+    document.getElementById('statusBar').textContent = msg;
+  }
+
+  function showProgress(show) {
+    const el = document.getElementById('progressWrap');
+    if (show) el.classList.add('visible');
+    else {
+      setTimeout(() => {
+        el.classList.remove('visible');
+        document.getElementById('progressBar').style.width = '0%';
+      }, 500);
+    }
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+</script>
+</body>
+</html>

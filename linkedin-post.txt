@@ -1,0 +1,31 @@
+🚀 I built an AI study tool for Indian students using Google Gemini — here's what I learned.
+
+Every exam season, millions of students stare at 300-page textbooks with not enough time. Private tuition costs thousands. Complex English is a barrier. I built NoteSnap to solve this.
+
+📚 What is NoteSnap?
+A free web app where you upload any textbook PDF and Google Gemini AI instantly generates:
+→ Structured summaries with key concepts
+→ Exam questions + model answers
+→ 10-point quick revision lists
+→ Simplified explanations for complex English
+→ Mind maps for visual learners
+
+🛠️ Tech Stack:
+• Google Gemini 1.5 Flash API — the AI engine
+• PDF.js — browser-side text extraction
+• Pure HTML/CSS/JS — zero dependencies, runs in any browser
+• Google AI Studio — prompt engineering & testing
+
+💡 The biggest thing I learned: prompt engineering is at least as important as the AI model itself. The same content produces completely different outputs based on how you instruct the model. My "Exam Prep" prompt took 12 iterations.
+
+🎯 Real impact:
+A student uploads a 35-page NCERT chapter → NoteSnap generates exam-ready content in under 10 seconds → saves 3–4 hours of reading time → completely free.
+
+No login. No payment. One HTML file. Open in Chrome and go.
+
+Built for the #GenAIAcademy APAC — Meet the Builders 2026 campaign.
+
+🔗 Try it yourself: [link to your project]
+🔑 Free API key: aistudio.google.com
+
+#GoogleGemini #GeminiAPI #GenAIAcademy #MeetTheBuilders #AIForStudents #IndiaAI #StudentDeveloper #BuildInPublic #GoogleCloud #APAC
