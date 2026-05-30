@@ -25,7 +25,7 @@ No login. No payment. One HTML file. Open in Chrome and go.
 
 Built for the #GenAIAcademy APAC — Meet the Builders 2026 campaign.
 
-🔗 Try it yourself: [link to your project]
+🔗 Try it yourself: https://notesnap2.netlify.app/
 🔑 Free API key: aistudio.google.com
 
 #GoogleGemini #GeminiAPI #GenAIAcademy #MeetTheBuilders #AIForStudents #IndiaAI #StudentDeveloper #BuildInPublic #GoogleCloud #APAC

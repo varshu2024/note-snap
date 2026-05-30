@@ -70,7 +70,7 @@ Choose one platform:
   - Problem solved: Students spending hours on thick textbooks with no affordable help
   - Google AI tools used: **Google Gemini 1.5 Flash API, Google AI Studio**
   - Blog post URL: (from Step 4)
-  - Live demo URL: (GitHub Pages / Netlify if hosted, or mark as local)
+  - Live demo URL: **https://notesnap2.netlify.app/**
 - [ ] Submit the form ✅
 
 ---
@@ -93,9 +93,7 @@ Choose one platform:
 Hosting your app gives you a live URL to share — highly recommended!
 
 **Netlify (Easiest — 2 minutes)**
-1. Go to https://app.netlify.com/drop
-2. Drag and drop your `index.html` file
-3. You get a live URL instantly (e.g., `notesnap-abc123.netlify.app`)
+- ✅ Already deployed at: **https://notesnap2.netlify.app/**
 
 **GitHub Pages**
 1. Create a GitHub repository named `notesnap`

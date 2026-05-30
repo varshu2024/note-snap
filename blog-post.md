@@ -100,6 +100,9 @@ That's the real value — not just AI for AI's sake, but AI that solves a genuin
 
 ## How to Try NoteSnap Right Now
 
+You can try the live hosted version of NoteSnap instantly at **[notesnap2.netlify.app](https://notesnap2.netlify.app/)**!
+
+Alternatively, you can run it locally:
 1. Get a free Gemini API key at [aistudio.google.com](https://aistudio.google.com) (no credit card needed)
 2. Open `index.html` in Chrome
 3. Paste your key, upload any PDF, choose a summary style

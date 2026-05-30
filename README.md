@@ -1,7 +1,8 @@
 # 📚 NoteSnap — AI-Powered Study Summarizer
 
 > **Built for Gen AI Academy APAC 2026 — Meet the Builders Campaign**  
-> Powered by **Google Gemini 1.5 Flash**
+> Powered by **Google Gemini 1.5 Flash**  
+> 🌐 **Live Demo:** [notesnap2.netlify.app](https://notesnap2.netlify.app/)
 
 ---
 
